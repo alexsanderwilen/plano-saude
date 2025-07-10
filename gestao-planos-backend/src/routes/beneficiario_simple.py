@@ -11,6 +11,9 @@ from sqlalchemy import or_, and_
 from datetime import datetime
 import csv
 import io
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from reportlab.pdfgen import canvas
 
 beneficiario_bp = Blueprint('beneficiario', __name__)
 
@@ -220,6 +223,70 @@ def get_historico_beneficiario(beneficiario_id):
         ).order_by(HistoricoBeneficiario.data_alteracao.desc()).all()
         
         return jsonify(historicos_beneficiario_schema.dump(historico))
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@beneficiario_bp.route('/beneficiarios/export/pdf', methods=['GET'])
+@cross_origin()
+def export_beneficiarios_pdf():
+    """Exporta beneficiários para PDF"""
+    try:
+        # Aplicar os mesmos filtros da listagem
+        nome = request.args.get('nome', '')
+        cpf = request.args.get('cpf', '')
+        matricula = request.args.get('matricula', '')
+        plano = request.args.get('plano', '')
+        situacao = request.args.get('situacao', '')
+        tipo = request.args.get('tipo', '')
+        
+        query = Beneficiario.query.filter_by(ativo=True)
+        
+        if nome:
+            query = query.filter(Beneficiario.nome_completo.ilike(f'%{nome}%'))
+        if cpf:
+            query = query.filter(Beneficiario.cpf.like(f'%{cpf}%'))
+        if matricula:
+            query = query.filter(Beneficiario.matricula.like(f'%{matricula}%'))
+        if plano:
+            query = query.filter(Beneficiario.plano_saude_vinculado.ilike(f'%{plano}%'))
+        if situacao:
+            query = query.filter(Beneficiario.situacao_cadastral == situacao)
+        if tipo:
+            query = query.filter(Beneficiario.tipo_beneficiario == tipo)
+        
+        beneficiarios = query.order_by(Beneficiario.nome_completo).all()
+        
+        # Criar PDF
+        buffer = io.BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+        
+        # Cabeçalho
+        p.drawString(100, 800, "Relatório de Beneficiários")
+        
+        # Tabela de dados
+        data = [[
+            'Matrícula', 'Nome Completo', 'CPF', 'Plano de Saúde', 'Situação'
+        ]]
+        for b in beneficiarios:
+            data.append([
+                b.matricula, b.nome_completo, b.cpf, b.plano_saude_vinculado, b.situacao_cadastral
+            ])
+        
+        table = Table(data)
+        table.wrapOn(p, 700, 500)
+        table.drawOn(p, 100, 750)
+        
+        p.showPage()
+        p.save()
+        
+        buffer.seek(0)
+        
+        response = make_response(buffer.getvalue())
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename=beneficiarios_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+        
+        return response
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
