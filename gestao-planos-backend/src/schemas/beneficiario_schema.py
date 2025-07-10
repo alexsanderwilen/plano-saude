@@ -52,7 +52,7 @@ class BeneficiarioSchema(Schema):
     ativo = fields.Bool(dump_only=True)
     
     @validates('cpf')
-    def validate_cpf(self, value):
+    def validate_cpf(self, value, **kwargs):
         # Remove caracteres não numéricos
         cpf = re.sub(r'[^0-9]', '', value)
         
@@ -80,7 +80,7 @@ class BeneficiarioSchema(Schema):
             raise ValidationError('CPF inválido')
     
     @validates('cep')
-    def validate_cep(self, value):
+    def validate_cep(self, value, **kwargs):
         # Remove caracteres não numéricos
         cep = re.sub(r'[^0-9]', '', value)
         
@@ -88,7 +88,7 @@ class BeneficiarioSchema(Schema):
             raise ValidationError('CEP deve ter 8 dígitos')
     
     @validates('data_nascimento')
-    def validate_data_nascimento(self, value):
+    def validate_data_nascimento(self, value, **kwargs):
         if value > datetime.now().date():
             raise ValidationError('Data de nascimento não pode ser futura')
         
