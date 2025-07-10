@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, make_response
 from flask_cors import cross_origin
-from src.models.beneficiario import Beneficiario, HistoricoBeneficiario, db
+from src.models.beneficiario import Beneficiario, HistoricoBeneficiario
+from src.database.database import db
 from src.schemas.beneficiario_schema import (
     beneficiario_schema, beneficiarios_schema, 
     historico_beneficiario_schema, historicos_beneficiario_schema
