@@ -12,8 +12,9 @@ from datetime import datetime
 import csv
 import io
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
-from reportlab.pdfgen import canvas
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
 
 beneficiario_bp = Blueprint('beneficiario', __name__)
 
@@ -259,11 +260,12 @@ def export_beneficiarios_pdf():
         
         # Criar PDF
         buffer = io.BytesIO()
-        p = canvas.Canvas(buffer, pagesize=letter)
-        
-        # Cabeçalho
-        p.drawString(100, 800, "Relatório de Beneficiários")
-        
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+
+        # Título
+        elements.append(Paragraph("Relatório de Beneficiários", getSampleStyleSheet()['h1']))
+
         # Tabela de dados
         data = [[
             'Matrícula', 'Nome Completo', 'CPF', 'Plano de Saúde', 'Situação'
@@ -272,14 +274,22 @@ def export_beneficiarios_pdf():
             data.append([
                 b.matricula, b.nome_completo, b.cpf, b.plano_saude_vinculado, b.situacao_cadastral
             ])
-        
+
         table = Table(data)
-        table.wrapOn(p, 700, 500)
-        table.drawOn(p, 100, 750)
-        
-        p.showPage()
-        p.save()
-        
+        style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ])
+        table.setStyle(style)
+
+        elements.append(table)
+        doc.build(elements)
+
         buffer.seek(0)
         
         response = make_response(buffer.getvalue())
